@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+
+# enable interactive shell
+exec < /dev/tty
+
+types=("build" "chore" "ci" "docs" "feat" "fix" "perf" "refactor" "revert" "style" "test")
+
+echo 'Select a type*:'
+select type in "${types[@]}"; do
+  if [ $REPLY -gt "${#types[@]}" ]; then
+    echo 'Invalid type, try again...' >&2
+  else
+    break
+  fi
+done
+
+echo
+echo "Scope:"
+read scope
+
+echo
+while true; do
+  echo "Subject*:"
+  read subject
+  if [[ "$subject" != "" ]]; then
+    break
+  else
+    echo "This is a required field"
+  fi
+done
+
+echo
+breakingchange=false
+while true; do
+  read -n 1 -p "Is this a breaking change? [yN] " yn
+  case $yn in
+    [Yy]* ) breakingchange=true; break;;
+    [Nn]* ) break;;
+    "" ) break;;
+    * ) echo "Please answer yes or no.";;
+  esac
+done
+
+echo
+echo
+echo "Body:"
+read body
+
+echo
+echo "Footer:"
+read footer
+
+# build message
+
+typescoped="${type}" 
+if [[ "$scope" != "" ]]; then
+  typescoped="${type}(${scope})" 
+fi
+
+message="${typescoped}: ${subject}"
+
+if [[ "${body}" != "" ]]; then
+  message="${message}\n\n${body}"
+fi
+
+
+if $breakingchange || [[ "$footer" != "" ]]; then
+  message="${message}\n\n"
+fi
+
+if $breakingchange; then
+  message="${message}BREAKING CHANGE"
+  if [[ "${footer}" != "" ]]; then
+    message="${message}: "
+  fi
+fi
+
+if [[ "${footer}" != "" ]]; then
+  message="${message}${footer}"
+fi
+
+
+echo
+echo Message:
+echo -e $message
+echo
+
+echo $message > $1
